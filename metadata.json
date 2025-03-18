@@ -1,0 +1,7 @@
+{
+    "name": "MinecraftBot",
+    "version": "1.0.0",
+    "description": "A ChatTriggers module for automating Minecraft actions.",
+    "author": "NoName",
+    "entry": "modules/core/main.js"
+}
