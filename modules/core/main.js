@@ -1,4 +1,11 @@
 // main.js - Entry point for the ChatTriggers bot
+
+const File = Java.type("java.io.File");
+let folder = new File("./config/FarmBot/");
+if (!folder.exists()) {
+    folder.mkdirs();
+}
+
 import { getBotState, getIsFollowingPath, getCurrentPathType, updatePestRepellent, setReapplyPestRepellent, setCheckFailed, setMinPestCount } from "../core/globalVaribles";
 import { inventoryChecker, resetInventoryChecker } from "../checkers/inventoryChecker";
 import { resetYawPitchChecker, yawPitchChecker } from "../checkers/yawPitchChecker";

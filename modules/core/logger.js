@@ -11,7 +11,7 @@ const LOG_LEVELS = {
 };
 
 setLogLevel("WARN"); // Set the default log level
-const logFileLocation = "./config/ChatTriggers/modules/FarmBot/logs/bot.log"; // Location of the log file
+const logFileLocation = "./config/FarmBot/bot.log"; // Location of the log file
 FileLib.write(logFileLocation, ""); // Create the log file if it doesn't exist
 
 /**

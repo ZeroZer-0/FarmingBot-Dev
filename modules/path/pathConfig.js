@@ -4,7 +4,7 @@ import { getTestingMode } from "../core/globalVaribles";
 import { logInfo, logError, logDebug } from "../core/logger";
 
 
-let pathsFileLocation = "./config/ChatTriggers/modules/FarmBot/configs/paths.json";
+let pathsFileLocation = "./config/FarmBot/paths.json";
 
 
 
@@ -14,9 +14,9 @@ let pathsFileLocation = "./config/ChatTriggers/modules/FarmBot/configs/paths.jso
  */
 export function loadPaths() {
     if (getTestingMode()) {
-        pathsFileLocation = "./config/ChatTriggers/modules/FarmBot/configs/testing paths.json";
+        pathsFileLocation = "./config/FarmBot/testing paths.json";
     } else {
-        pathsFileLocation = "./config/ChatTriggers/modules/FarmBot/configs/paths.json";
+        pathsFileLocation = "./config/FarmBot/paths.json";
     }
     if (!FileLib.exists(pathsFileLocation)) {
         savePaths({ Primary: [], Secondary: [], Evacuation: [] }); // Create a default file
