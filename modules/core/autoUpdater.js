@@ -19,10 +19,19 @@ const TMP_ZIP_PATH = "./config/FarmBot/update.zip";
 function doGetRequest(urlString) {
     try {
         let url = new URL(urlString);
-        let connection = Java.cast(url.openConnection(), HttpURLConnection);
-        connection.setRequestMethod("GET");
+        logDebug("Performing GET request to: " + urlString);
+        let connection = url.openConnection();
         connection.setRequestProperty("User-Agent", "FarmBot-Updater");
-        connection.connect();
+
+        if (connection instanceof HttpURLConnection) {
+            connection.setRequestMethod("GET");
+            connection.connect();
+        } else {
+            logDebug("Connection is not an HttpURLConnection");
+            return "";
+        }
+        let responseCode = connection.getResponseCode();
+        logDebug("Response code: " + responseCode);
 
         let reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
         let response = "", line;
@@ -38,41 +47,20 @@ function doGetRequest(urlString) {
     }
 }
 
-function downloadZipFile(fileURL, outputPath) {
-    try {
-        let url = new URL(fileURL);
-        let connection = Java.cast(url.openConnection(), HttpURLConnection);
-        connection.setRequestMethod("GET");
-        connection.setRequestProperty("User-Agent", "FarmBot-Updater");
-        connection.connect();
-
-        let input = new BufferedInputStream(connection.getInputStream());
-        let output = new FileOutputStream(outputPath);
-
-        let buffer = Java.array('byte', 1024);
-        let bytesRead;
-
-        while ((bytesRead = input.read(buffer, 0, 1024)) !== -1) {
-            output.write(buffer, 0, bytesRead);
-        }
-
-        input.close();
-        output.close();
-        connection.disconnect();
-        logDebug("Downloaded ZIP to: " + outputPath);
-    } catch (e) {
-        logDebug("Download ZIP error: " + e);
-    }
-}
-
 function extractZip(zipPath, destFolder) {
     try {
         let zipFile = new File(zipPath);
         let input = new ZipInputStream(new BufferedInputStream(new java.io.FileInputStream(zipFile)));
         let entry;
 
+        // Step 1: Extract into a temp directory
+        let tempExtractPath = new File("./config/FarmBot/Temp/");
+        if (tempExtractPath.exists()) deleteFolderRecursive(tempExtractPath.getAbsolutePath());
+        tempExtractPath.mkdirs();
+
         while ((entry = input.getNextEntry()) !== null) {
-            let outPath = new File(destFolder, entry.getName());
+            let outPath = new File(tempExtractPath, entry.getName());
+
             if (entry.isDirectory()) {
                 outPath.mkdirs();
             } else {
@@ -80,47 +68,105 @@ function extractZip(zipPath, destFolder) {
                 if (!parent.exists()) parent.mkdirs();
 
                 let out = new FileOutputStreamJava(outPath);
-                let buffer = Java.array('byte', 1024);
-                let len;
-                while ((len = input.read(buffer)) > 0) {
-                    out.write(buffer, 0, len);
+                let byte;
+                while ((byte = input.read()) !== -1) {
+                    out.write(byte);
                 }
                 out.close();
             }
+
             input.closeEntry();
         }
 
         input.close();
-        logDebug("Extraction complete.");
+
+        // Step 2: Find the inner extracted folder (e.g., ZeroZer-0-FarmingBot-Dev-xxxx)
+        let folders = tempExtractPath.listFiles();
+        let extractedRoot = null;
+        for (let i = 0; i < folders.length; i++) {
+            if (folders[i].isDirectory()) {
+                extractedRoot = folders[i];
+                break;
+            }
+        }
+
+        if (extractedRoot === null) {
+            logDebug("No root folder found in zip.");
+            return;
+        }
+
+        // Step 3: Delete existing FarmBot folder
+        let finalPath = new File("./config/ChatTriggers/modules/FarmBot");
+        if (finalPath.exists()) deleteFolderRecursive(finalPath.getAbsolutePath());
+
+        // Step 4: Rename the extracted folder to FarmBot
+        if (!extractedRoot.renameTo(finalPath)) {
+            logDebug("Failed to rename extracted folder.");
+            return;
+        }
+
+        // Step 5: Delete the temp folder
+        deleteFolderRecursive(tempExtractPath.getAbsolutePath());
+
+        // Step 6: Delete the original zip
+        let zipToDelete = new File(zipPath);
+        if (zipToDelete.exists()) zipToDelete.delete();
+
+        logDebug("Extraction complete. Updated FarmBot module.");
     } catch (e) {
         logDebug("Unzip error: " + e);
     }
 }
 
-function deleteCurrentModule() {
-    let folder = new File(DEST_FOLDER + `FarmBot-Dev-${CURRENT_VERSION}/`);
-
-    if (!folder.exists()) {
-        logError("Folder does not exist: " + folder.getAbsolutePath());
-        return;
-    }
-
-    if (folder.isDirectory()) {
+function deleteFolderRecursive(path) {
+    let folder = new File(path);
+    if (folder.exists()) {
         let files = folder.listFiles();
-        if (files) {
-            for (let i = 0; i < files.length; i++) {
-                let file = files[i];
-                if (file.isDirectory()) {
-                    deleteCurrentModule(file.getAbsolutePath());
-                } else {
-                    file.delete();
-                }
+        for (let i = 0; i < files.length; i++) {
+            if (files[i].isDirectory()) {
+                deleteFolderRecursive(files[i].getAbsolutePath());
+            } else {
+                files[i].delete();
             }
         }
+        folder.delete();
     }
+}
 
-    folder.delete();
-    logDebug("Deleted current module: " + folder.getAbsolutePath());
+
+
+function downloadZipFile(fileURL, outputPath) {
+    try {
+        let url = new URL(fileURL);
+        let connection = url.openConnection();
+        connection.setRequestProperty("User-Agent", "FarmBot-Updater");
+
+        if (connection instanceof HttpURLConnection) {
+            connection.setRequestMethod("GET");
+            connection.connect();
+        } else {
+            logDebug("Connection is not an HttpURLConnection");
+            return;
+        }
+
+        logDebug("Downloading ZIP Started");
+
+        let input = new BufferedInputStream(connection.getInputStream());
+        let output = new FileOutputStream(outputPath);
+
+        let byte;
+        while ((byte = input.read()) !== -1) {
+            output.write(byte);
+        }
+
+        input.close();
+        output.close();
+        connection.disconnect();
+
+        logDebug("Downloaded ZIP to: " + outputPath);
+    } catch (e) {
+        logDebug("Download ZIP error: " + e);
+    }
 }
 
 export function checkForUpdate() {
@@ -132,23 +178,18 @@ export function checkForUpdate() {
         let latestVersion = release.tag_name;
 
         if (latestVersion !== CURRENT_VERSION) {
-            logDebug("New version available: " + latestVersion);
+            ChatLib.chat("New version available: " + latestVersion);
             ChatLib.chat("&c[FarmBot] New version has been found and is being installed for you!");
             ChatLib.chat("&c[FarmBot] Please wait while until chat triggers is reloaded before using.");
 
-            let assets = release.assets;
-            for (let i = 0; i < assets.length; i++) {
-                let asset = assets[i];
-                if (asset.name.endsWith(".zip")) {
-                    logDebug("Downloading: " + asset.name);
-                    downloadZipFile(asset.browser_download_url, TMP_ZIP_PATH);
-                    extractZip(TMP_ZIP_PATH, DEST_FOLDER);
-                    deleteCurrentModule();
-                    logDebug("Update applied.");
-                    ChatLib.chat("&c[FarmBot] Update complete! Attempting to reload chat triggers now.");
-                    ChatLib.command("ct load");
-                    return;
-                }
+            let zipUrl = release.zipball_url;
+            if (zipUrl) {
+                logDebug("Downloading ZIP from: " + zipUrl);
+                downloadZipFile(zipUrl, TMP_ZIP_PATH);
+                extractZip(TMP_ZIP_PATH, DEST_FOLDER);
+                logDebug("Update applied.");
+                ChatLib.chat(`&c[FarmBot] Update complete! Please use "/ct load" reload chat triggers now.`);
+                return;
             }
 
             logDebug("No .zip asset found in the latest release.");
