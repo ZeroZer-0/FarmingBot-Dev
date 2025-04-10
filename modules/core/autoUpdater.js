@@ -11,7 +11,7 @@ const File = Java.type("java.io.File");
 const FileOutputStreamJava = Java.type("java.io.FileOutputStream");
 const Thread = Java.type("java.lang.Thread");
 
-const CURRENT_VERSION = "1.1.0";
+const CURRENT_VERSION = "v1.1.1";
 const REPO = "ZeroZer-0/FarmingBot-Dev";
 const DEST_FOLDER = `./config/ChatTriggers/Modules/`;
 const TMP_ZIP_PATH = "./config/FarmBot/update.zip";
