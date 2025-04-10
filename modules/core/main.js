@@ -17,6 +17,9 @@ import { updatePlayerArea } from "../player/playerManager";
 import { checkPestRepellent } from "./pestRepellent";
 import { openPathGui } from "../gui/pathGui";
 import { toggleBotGui } from "../gui/botGui";
+import { checkForUpdate } from "./autoUpdater";
+
+checkForUpdate(); // Check for updates on module load
 
 let lock1 = false;
 let lock2 = false;

@@ -11,7 +11,7 @@ const File = Java.type("java.io.File");
 const FileOutputStreamJava = Java.type("java.io.FileOutputStream");
 const Thread = Java.type("java.lang.Thread");
 
-const CURRENT_VERSION = "1.0.0";
+const CURRENT_VERSION = "1.1.0";
 const REPO = "ZeroZer-0/FarmingBot-Dev";
 const DEST_FOLDER = `./config/ChatTriggers/Modules/`;
 const TMP_ZIP_PATH = "./config/FarmBot/update.zip";
@@ -123,35 +123,37 @@ function deleteCurrentModule() {
     logDebug("Deleted current module: " + folder.getAbsolutePath());
 }
 
-new Thread(function () {
-    let releaseJson = doGetRequest("https://api.github.com/repos/" + REPO + "/releases/latest");
-    if (!releaseJson) return;
+export function checkForUpdate() {
+    new Thread(function () {
+        let releaseJson = doGetRequest("https://api.github.com/repos/" + REPO + "/releases/latest");
+        if (!releaseJson) return;
 
-    let release = JSON.parse(releaseJson);
-    let latestVersion = release.tag_name;
+        let release = JSON.parse(releaseJson);
+        let latestVersion = release.tag_name;
 
-    if (latestVersion !== CURRENT_VERSION) {
-        logDebug("New version available: " + latestVersion);
-        ChatLib.chat("&c[FarmBot] New version has been found and is being installed for you!");
-        ChatLib.chat("&c[FarmBot] Please wait while until chat triggers is reloaded before using.");
+        if (latestVersion !== CURRENT_VERSION) {
+            logDebug("New version available: " + latestVersion);
+            ChatLib.chat("&c[FarmBot] New version has been found and is being installed for you!");
+            ChatLib.chat("&c[FarmBot] Please wait while until chat triggers is reloaded before using.");
 
-        let assets = release.assets;
-        for (let i = 0; i < assets.length; i++) {
-            let asset = assets[i];
-            if (asset.name.endsWith(".zip")) {
-                logDebug("Downloading: " + asset.name);
-                downloadZipFile(asset.browser_download_url, TMP_ZIP_PATH);
-                extractZip(TMP_ZIP_PATH, DEST_FOLDER);
-                deleteCurrentModule();
-                logDebug("Update applied.");
-                ChatLib.chat("&c[FarmBot] Update complete! Attempting to reload chat triggers now.");
-                ChatLib.command("ct load");
-                return;
+            let assets = release.assets;
+            for (let i = 0; i < assets.length; i++) {
+                let asset = assets[i];
+                if (asset.name.endsWith(".zip")) {
+                    logDebug("Downloading: " + asset.name);
+                    downloadZipFile(asset.browser_download_url, TMP_ZIP_PATH);
+                    extractZip(TMP_ZIP_PATH, DEST_FOLDER);
+                    deleteCurrentModule();
+                    logDebug("Update applied.");
+                    ChatLib.chat("&c[FarmBot] Update complete! Attempting to reload chat triggers now.");
+                    ChatLib.command("ct load");
+                    return;
+                }
             }
-        }
 
-        logDebug("No .zip asset found in the latest release.");
-    } else {
-        logDebug("You are running the latest version.");
-    }
-}).start();
+            logDebug("No .zip asset found in the latest release.");
+        } else {
+            logDebug("You are running the latest version.");
+        }
+    }).start();
+}
